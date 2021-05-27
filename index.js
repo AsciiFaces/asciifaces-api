@@ -1,17 +1,35 @@
 require("dotenv").config();
 
+const { ethers } = require("ethers");
 const express = require("express");
 const sharp = require("sharp");
 
 const { renderSvg, generateFaces } = require("./lib/face");
 const htmlSafe = require("./lib/html-safe");
 
+const AsciiFaces = require("./abis/AsciiFaces.json");
+
 const app = express();
 
-const port = process.env.PORT || 3000;
+const RPCUrl = process.env.RPC_URL;
+const providers = new ethers.providers.JsonRpcProvider(RPCUrl);
+
+const contractAddress = process.env.CONTRACT_ADDRESS;
+const contract = new ethers.Contract(
+  contractAddress,
+  AsciiFaces.abi,
+  providers
+);
 
 app.get("/faces/:id", async (req, res) => {
   const { id } = req.params;
+
+  const totalSupply = await contract.totalSupply();
+  const total = Number(totalSupply);
+
+  if (Number(id) > total || Number(id) <= 0) {
+    return res.status(404).json({ message: "Query nonexistent token" });
+  }
 
   res.json({
     name: `ASCII Faces #${id}`,
@@ -25,11 +43,24 @@ app.get("/faces/:id", async (req, res) => {
 app.get("/faces/:id/image.svg", async (req, res) => {
   const { id } = req.params;
 
-  const text = htmlSafe(generateFaces(id));
+  const totalSupply = await contract.totalSupply();
+  const total = Number(totalSupply);
 
-  const svg = renderSvg(text);
+  if (Number(id) > total || Number(id) <= 0) {
+    return res.status(404).json({ message: "Query nonexistent token" });
+  }
 
-  res.type("svg").send(Buffer.from(svg));
+  try {
+    const face = await contract.getFace(id);
+    const text = htmlSafe(face);
+    const svg = renderSvg(text);
+
+    return res.type("svg").send(Buffer.from(svg));
+  } catch (err) {
+    console.log(err);
+
+    throw new Error("TOKEN is not exist");
+  }
 });
 
 app.get("/faces/:id/image.png", async (req, res) => {
@@ -51,6 +82,8 @@ app.get("/faces/:id/image.png", async (req, res) => {
 
   res.type("svg").send(Buffer.from(image));
 });
+
+const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}...`);
