@@ -11,8 +11,7 @@ const AsciiFaces = require("./abis/AsciiFaces.json");
 
 const app = express();
 
-const RPCUrl = process.env.RPC_URL;
-const providers = new ethers.providers.JsonRpcProvider(RPCUrl);
+const providers = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 
 const contractAddress = process.env.CONTRACT_ADDRESS;
 const contract = new ethers.Contract(
