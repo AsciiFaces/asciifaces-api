@@ -20,6 +20,15 @@ const contract = new ethers.Contract(
   providers
 );
 
+const handleErrors = (err, req, res, next) => {
+  return res.status(500).json({
+    status: "error",
+    message: err.message,
+  });
+};
+
+app.use(handleErrors);
+
 app.get("/faces/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -39,7 +48,7 @@ app.get("/faces/:id", async (req, res) => {
   });
 });
 
-app.get("/faces/:id/image.svg", async (req, res) => {
+app.get("/faces/:id/image.svg", async (req, res, next) => {
   const { id } = req.params;
 
   const totalSupply = await contract.totalSupply();
@@ -56,9 +65,7 @@ app.get("/faces/:id/image.svg", async (req, res) => {
 
     return res.type("svg").send(Buffer.from(svg));
   } catch (err) {
-    console.log(err);
-
-    throw new Error("TOKEN is not exist");
+    next(err);
   }
 });
 
